@@ -1,0 +1,6 @@
+class A {
+  %parseable;
+  optional int a syntax(self|);
+  syntax('foo'|a|);
+}
+
