@@ -206,6 +206,7 @@ void ParseTreeAltList::GenerateFormatter(const FormatInfo& format_info,
   const char* stmt_sep = "if (";
   bool empty_allowed = false;
   ParseTree* semi_determined = nullptr;
+  ParseTree* fall_back = nullptr;
   for (auto tree : array) {
     ParseTreeSymbol* s = tree->AsSymbol();
     if (s && s->value.size() == 0) {
@@ -228,9 +229,8 @@ void ParseTreeAltList::GenerateFormatter(const FormatInfo& format_info,
         break;
       }
       case NOT_DETERMINING: {
-        // TODO(dgudeman): this case could be treated like another default to
-        // be printed if nothing else works.
-        assert(false);
+        // what to use if nothing else works.
+        fall_back = tree;
         continue;
       }
     }
@@ -239,7 +239,12 @@ void ParseTreeAltList::GenerateFormatter(const FormatInfo& format_info,
     tree->GenerateFormatter(format_info, separator + "  ", is_first, is_last);
     stmt_sep = "} else if (";
   }
-  if (!empty_allowed && semi_determined) {
+  if (fall_back) {
+    // No non-default values seen. Print an arbitrary tag if there is one.
+    format_info.stream_ << separator << "} else {";
+    fall_back->GenerateFormatter(
+        format_info, separator + "  ", is_first, is_last);
+  } else if (!empty_allowed && semi_determined) {
     // If nothing else worked, print the first default value seen.
     format_info.stream_ << separator << "} else {";
     semi_determined->GenerateFormatter(
@@ -302,6 +307,7 @@ void ParseTree::GenerateCaseFormatter(const FormatInfo& format_info,
     for (auto tree : alt_list->array) {
       assert(tree->IsAssignment());
       ParseTreeBinop* assignment = tree->AsBinop();
+      assert(assignment->op == token::TOK_RIGHTARROW);
       if (assignment->operand1() == nullptr) {
         default_val = assignment->operand2();
         break;
@@ -317,11 +323,13 @@ void ParseTree::GenerateCaseFormatter(const FormatInfo& format_info,
   }
   for (auto tree : alt_list->array) {
     ParseTreeBinop* assignment = tree->AsBinop();
+    assert(assignment->op == token::TOK_RIGHTARROW);
     if (assignment->operand1() == nullptr) continue;
-    format_info.stream_ << separator << else_token << "if ("
-                        << attribute->attribute_name << " == ";
-    assignment->operand2()->GenerateExpression(format_info.stream_);
-    format_info.stream_ << ") {";
+    ParseTreeSymbol* assign_value = assignment->operand2()->AsSymbol();
+    assert(assign_value);
+    format_info.stream_
+        << separator << else_token << "if (" << attribute->attribute_name
+        << " == " << assign_value->value << ") {";
     assignment->operand1()->GenerateFormatter(format_info, separator + "  ",
                                               false, false);
     else_token = "} else ";
@@ -413,9 +421,8 @@ AlternateDetermination ParseTreeAttribute::GenerateAlternateCondition(ostream& s
     stream << "(!" << attribute_name << ".empty())";
     return FULLY_DETERMINING;
   }
-  if (default_value) {
-    stream << attribute_name << " != ";
-    default_value->Print(stream);
+  if (!default_value.empty()) {
+    stream << attribute_name << " != " << default_value;
     return SEMI_DETERMINING;
   }
   return NOT_DETERMINING;

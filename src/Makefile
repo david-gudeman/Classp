@@ -4,7 +4,7 @@ OFILES=formatter-generator.o lexer-base.o parse-tree.o cpp11-generator.o \
 CCFILES=${OFILES:.o=.cc}
 YHEADERS=classp.yacc.hh location.hh stack.hh position.hh
 GENERATE_TESTS=t1 t2 t3 t4 t5 t6 t7 t8 t9 t10 t11 \
-    prec1 prec2 prec4 assign1 example1 example2 classp_lang expr1 \
+    alt2 alt3 prec1 prec2 prec4 assign1 example1 example2 classp_lang expr1 \
     calculator1
 SAMPLES_TESTS=samples t1 t2 t3 t4 t5 t11 \
     assign1 example1 example2 expr1 prec2 prec4

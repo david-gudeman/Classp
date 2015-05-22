@@ -18,20 +18,20 @@
 
 class B {
   bool b;
-  syntax(b{true->'t'|false->'f'});
+  syntax(b{'true'->'t'|'false'->'f'});
 }
 class I {
   int i;
-  syntax(i{1->'one'|2->'two'});
+  syntax(i{'1'->'one'|'2'->'two'});
 }
 class S {
   string s;
-  syntax(s{'1'->'one'|'2'->'two'});
+  syntax(s{'"1"'->'one'|'"2"'->'two'});
 }
 
 class B2 {
  bool b;
- syntax(b{true->'t'|false->});
+ syntax(b{'true'->'t'|'false'->});
 }
 
 class D {

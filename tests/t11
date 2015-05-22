@@ -18,7 +18,7 @@
 
 class A {
   %parseable;
-  bool b default false syntax(self{true->'b'}|);
+  bool b default 'false' syntax(self{'true'->'b'}|);
   syntax('a' b 'c');
   sample('a b c', '(A b:true)');
   sample('a c', '(A b:false)');

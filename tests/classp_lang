@@ -33,27 +33,27 @@ class ClassDefinition {
   AttributeDeclaration attributes[];
   SyntaxDeclaration syntax_decl[];
   SampleDeclaration sample_decl[];
-  bool parseable default false syntax(self{true->'%parseable' ';'});
+  bool parseable default 'false' syntax(self{'true'->'%parseable' ';'});
   syntax ('class' class_name (':' parent_name|)
           '{' ((attributes|syntax_decl|sample_decl|parseable)*) '}');
 }
 
 class AttributeDeclaration {
-  bool is_optional default false syntax(self{true->'optional'}|);
+  bool is_optional default 'false' syntax(self{'true'->'optional'}|);
   identifier attribute_name;
   identifier type_name;
   optional Expression default_value syntax('default' self|);
-  bool is_array default false syntax(self{true->'[' ']'});
+  bool is_array default 'false' syntax(self{'true'->'[' ']'});
   optional SyntaxDeclaration syntax_decl syntax('syntax' '(' self ')'|);
   syntax(is_optional type_name attribute_name (default_value|is_array|) syntax_decl ';');
 }
 
 class SyntaxDeclaration {
   Pattern pattern;
-  optional Associativity assoc syntax(self{AssocLeft->'left'
-                                          |AssocRight->'right'
-                                          |AssocNassoc->'nassoc'
-                                          |AssocLeft->'assoc'});
+  optional Associativity assoc syntax(self{'AssocLeft'->'left'
+                                          |'AssocRight'->'right'
+                                          |'AssocNassoc'->'nassoc'
+                                          |'AssocLeft'->'assoc'});
   optional int precedence;
   syntax('syntax' '(' pattern ')' ('%' assoc precedence|));
 }
@@ -100,11 +100,11 @@ class Expression {
 class SampleDeclaration {
   string sample_decl;
   optional string expected;
-  SampleCheck check default ExpectSucceed syntax(self
-      {ExpectSucceed->'succeed'
-      |ExpectFailure->'fail'
-      |PrintResult->'print'
-      |CompareResult->});
+  SampleCheck check default 'ExpectSucceed' syntax(self
+      {'ExpectSucceed'->'succeed'
+      |'ExpectFailure'->'fail'
+      |'PrintResult'->'print'
+      |'CompareResult'->});
   syntax('sample' '(' sample_decl ',' (expected|check) ')');
 }
 

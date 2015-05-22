@@ -144,6 +144,9 @@ struct ParseTree {
                                    bool nested_alternate) {
     return this;
   }
+  
+  // Flatten list and alt nodes
+  virtual void FlattenSyntax() {};
 
   // Does some error checking on the declarations.
   virtual void Validate() { Fatal("illegal Validate"); }
@@ -306,6 +309,12 @@ struct ParseTreeMulti : public ParseTree {
 
   AlternateDetermination GenerateAlternateCondition(ostream& stream) override;
 
+  void FlattenSyntax() override {
+    for (auto elem : array) {
+      elem->FlattenSyntax();
+    }
+  }
+  
   bool IsLiteral() const override {
     for (auto elem : array) {
       if (!elem->IsLiteral()) return false;
@@ -518,7 +527,7 @@ struct ParseTreeAttribute : public ParseTree {
                      const yyParser::location_type& location,
                      const string& attribute_name, const string& source_type,
                      const bool is_optional, const bool is_array,
-                     ParseTree* default_value, ParseTree* syntax_decl);
+                     ParseTreeSymbol* default_value_tree, ParseTree* syntax_decl);
   ParseTreeAttribute(ParserBase* parser,
                      const yyParser::location_type& location,
                      const ParseTreeClassDecl* class_def)
@@ -537,7 +546,7 @@ struct ParseTreeAttribute : public ParseTree {
   void Decorate1(ParseTreeClassDecl* class_def);
 
   bool HasOptionalAttribute() override {
-    return is_optional || is_array || default_value;
+    return is_optional || is_array || default_value.size() > 0;
   }
 
   bool IsLiteral() const override { return false; }
@@ -566,7 +575,7 @@ struct ParseTreeAttribute : public ParseTree {
   const string source_type;
   const bool is_optional;
   const bool is_array;
-  ParseTree* default_value;
+  string default_value;
   ParseTreeSyntaxDecl* syntax_decl;
   bool is_self = false;
 
@@ -652,6 +661,8 @@ struct ParseTreeItemList : public ParseTreeMulti {
   ParseTree* ResolveSyntax(ParseTreeSyntaxDecl* syntax_def,
                            bool nested_alternate) override;
 
+  void FlattenSyntax() override;
+  
   int GenerateMatcher(RuleInfo* rule_info, int position, bool is_last) override;
 
   void GenerateFormatter(const FormatInfo& format_info, const string& separator,
@@ -670,6 +681,10 @@ struct ParseTreeAltList : public ParseTreeMulti {
   ParseTree* ResolveSyntax(ParseTreeSyntaxDecl* syntax_def,
                            bool nested_alternate) override;
 
+  void FlattenSyntax() override;
+  void FlattenSyntaxHelper(
+      vector<ParseTree*>* new_array, ParseTreeSymbol** found_empty);
+  
   int GenerateMatcher(RuleInfo* rule_info, int position, bool is_last) override;
 
   void GenerateProduction(RuleInfo* rule_info, const string& nonterminal);
