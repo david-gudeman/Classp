@@ -76,7 +76,7 @@ void ParseTreeClassDecl::GenerateMethodDefinitions(ostream& out) {
 }
 
 void ParseTreeAttribute::GeneratePrinter(ostream& stream) {
-  if (is_optional && default_value.empty()) {
+  if (is_optional && !default_value) {
     stream << "\n  if (has_" << attribute_name << ") {"
            << "\n    out << \" " << attribute_name << ":\";"
            << "\n    classpPrint(out, " << attribute_name << ");"
@@ -158,15 +158,17 @@ void ParseTreeClassDecl::GenerateConstructor(ostream& out) {
     for (const auto& attribute : optional_params) {
       const string& name = attribute->attribute_name;
         out << "\n  ";
-      if (!attribute->default_value.empty()) {
+      if (attribute->default_value) {
         out << "if (!(";
       }
       if (attribute->is_optional) {
         out << "has_" << name << " = ";
       }
       out << "keyword_args.Take(\""<< name << "\", " << name << ")";
-      if (!attribute->default_value.empty()) {
-        out << ")) {\n    " << name << " = " << attribute->default_value << ";\n  }";
+      if (attribute->default_value) {
+        out << ")) {\n    " << name << " = ";
+        attribute->default_value->GenerateExpression(out);
+        out << ";\n  }";
       } else {
         out << ";";
       }

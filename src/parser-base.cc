@@ -227,8 +227,8 @@ void ParserBase::AddParsedType(const string& type_name,
     nonterminal = "TOK_INT64";
     token_name_to_definition_["TOK_INT64"] = "/* user defined */";
   } else if (type_name == "string") {
-    nonterminal = "TOK_STRING_LITERAL";
-    token_name_to_definition_["TOK_STRING_LITERAL"] = "/* user defined */";
+    nonterminal = "TOK_STRING";
+    token_name_to_definition_["TOK_STRING"] = "/* user defined */";
   } else if (type_name == "identifier") {
     nonterminal = "TOK_IDENTIFIER";
     token_name_to_definition_["TOK_IDENTIFIER"] = "/* user defined */";

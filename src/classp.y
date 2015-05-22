@@ -140,13 +140,25 @@ static inline yyParser::symbol_type yylex(ParserBase* parser) {
 %type <ParseTreeAltList*> syntax_case_list
 %type <vector<string>> parents_list parents_list2
 %type <bool> opt_optional opt_array
+%type <classp::ParseTree*> conjunction
+%type <classp::ParseTree*> expression opt_initializer
+%type <classp::ParseTree*> comparison
+%type <classp::ParseTree*> factor
+%type <classp::ParseTree*> literal
+%type <classp::ParseTree*> operand
+%type <classp::ParseTree*> simple_expression
+%type <classp::ParseTree*> term
 %type <classp::ParseTree*> numeric_literal
-%type <classp::ParseTreeSymbol*> string_literal opt_default_value
+%type <classp::ParseTreeSymbol*> string_literal
 %type <int64_t> TOK_INTEGER_LITERAL
 %type <double> TOK_FLOAT_LITERAL
 %type <string>  TOK_IDENTIFIER opt_identifier
 %type <string>  TOK_SINGLE_QUOTED_STRING_LITERAL
 %type <string>  TOK_DOUBLE_QUOTED_STRING_LITERAL
+%type <int64_t> additive_operator
+%type <int64_t> multiplicative_operator
+%type <int64_t> relational_operator
+%type <int64_t> unary_operator
 %type <string> opt_code_literal
 
 %start start
@@ -171,6 +183,13 @@ opt_code_literal:
   | TOK_SINGLE_QUOTED_STRING_LITERAL { $$ = $1; }
   ;
 
+operand:
+    literal        { $$ = $1; }
+  | identifier     { $$ = $1; }
+  | TOK_NULL       { $$ = nullptr; }
+  | TOK_LPAREN expression TOK_RPAREN  { $$ = $2; }
+  ;
+
 identifier:
     TOK_IDENTIFIER { $$ = new ParseTreeIdentifier(parser, @$, $1); }
   ;
@@ -180,6 +199,13 @@ numeric_literal:
   | TOK_FLOAT_LITERAL    { $$ = new ParseTreeFloat(parser, @$, $1); }
   ;
 
+literal:
+    numeric_literal         { $$ = $1; }
+  | TOK_TRUE                { $$ = new ParseTreeBool(parser, @$, true); }
+  | TOK_FALSE               { $$ = new ParseTreeBool(parser, @$, false); }
+  | string_literal          { $$ = $1; }
+  ;
+
 string_literal:
     TOK_SINGLE_QUOTED_STRING_LITERAL  {
         $$ = new ParseTreeSymbol(parser, @$, $1);
@@ -187,6 +213,77 @@ string_literal:
   | TOK_DOUBLE_QUOTED_STRING_LITERAL  {
         $$ = new ParseTreeSymbol(parser, @$, $1);
       }
+  ;
+
+/* Expressions. */
+
+expression:
+    conjunction  { $$ = $1; }
+  | expression TOK_OR conjunction  {
+        $$ = new ParseTreeBinop(parser, @$, token::TOK_OR, $1, $3);
+      }
+  ;
+
+conjunction:
+    comparison  { $$ = $1; }
+  | conjunction TOK_AND comparison  {
+        $$ = new ParseTreeBinop(parser, @$, token::TOK_AND, $1, $3);
+      }
+  ;
+
+comparison:
+    simple_expression  { $$ = $1; }
+  | simple_expression relational_operator simple_expression  {
+        $$ = new ParseTreeBinop(parser, @$, $2, $1, $3);
+      }
+  ;
+
+relational_operator:
+    TOK_EQL  { $$ = token::TOK_EQL; }
+  | TOK_NEQ  { $$ = token::TOK_NEQ; }
+  | TOK_LSS  { $$ = token::TOK_LSS; }
+  | TOK_LEQ  { $$ = token::TOK_LEQ; }
+  | TOK_GTR  { $$ = token::TOK_GTR; }
+  | TOK_GEQ  { $$ = token::TOK_GEQ; }
+  ;
+
+simple_expression:
+    term  { $$ = $1; }
+  | simple_expression additive_operator term  {
+        $$ = new ParseTreeBinop(parser, @$, $2, $1, $3);
+      }
+  ;
+
+additive_operator:
+    TOK_PLUS   { $$ = token::TOK_PLUS; }
+  | TOK_MINUS  { $$ = token::TOK_MINUS; }
+  ;
+
+term:
+    factor  { $$ = $1; }
+  | term multiplicative_operator factor  {
+        $$ = new ParseTreeBinop(parser, @$, $2, $1, $3);
+      }
+  ;
+
+multiplicative_operator:
+    TOK_STAR     { $$ = token::TOK_STAR; }
+  | TOK_SLASH    { $$ = token::TOK_SLASH; }
+  | TOK_PERCENT  { $$ = token::TOK_PERCENT; }
+  | TOK_LSHIFT   { $$ = token::TOK_LSHIFT; }
+  | TOK_RSHIFT   { $$ = token::TOK_RSHIFT; }
+  ;
+
+factor:
+    operand  { $$ = $1; }
+  | unary_operator operand  {
+        $$ = new ParseTreeUnop(parser, @$, $1, $2);
+      }
+  ;
+
+unary_operator:
+    TOK_MINUS  { $$ = token::TOK_MINUS; }
+  | TOK_NOT    { $$ = token::TOK_NOT; }
   ;
 
 declaration_list:
@@ -219,7 +316,7 @@ class_body:
   ;
 
 attribute_decl:
-    opt_optional TOK_IDENTIFIER TOK_IDENTIFIER opt_array opt_default_value
+    opt_optional TOK_IDENTIFIER TOK_IDENTIFIER opt_array opt_initializer
     opt_syntax_decl {
       $$ = new ParseTreeAttribute(parser, @$, $3, $2, $1, $4, $5, $6); }
   | syntax_decl { $$ = $1; }
@@ -227,9 +324,9 @@ attribute_decl:
   | TOK_PERCENT identifier { $$ = $2; }
   ;
 
-opt_default_value:
+opt_initializer:
     { $$ = nullptr; }
-  | TOK_DEFAULT string_literal { $$ = $2; }
+  | TOK_DEFAULT expression { $$ = $2; }
 
 opt_optional:
     { $$ = false; }
@@ -329,11 +426,11 @@ syntax_item:
   ;
 
 syntax_case_list:
-    string_literal TOK_RIGHTARROW syntax_spec {
+    expression TOK_RIGHTARROW syntax_spec {
     $$ = new ParseTreeAltList(parser, @$);
     $$->array.push_back(
         new ParseTreeBinop(parser, @$, token::TOK_RIGHTARROW, $3, $1)); }
-  | syntax_case_list TOK_BAR string_literal TOK_RIGHTARROW syntax_spec {
+  | syntax_case_list TOK_BAR expression TOK_RIGHTARROW syntax_spec {
       $$ = $1; 
       $$->array.push_back(
           new ParseTreeBinop(parser, @$, token::TOK_RIGHTARROW, $5, $3)); }

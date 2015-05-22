@@ -53,14 +53,14 @@ ParseTreeClassDecl::ParseTreeClassDecl(ParserBase* parser,
 ParseTreeAttribute::ParseTreeAttribute(
     ParserBase* parser, const yyParser::location_type& location,
     const string& attribute_name, const string& source_type,
-    const bool is_optional, const bool is_array, ParseTreeSymbol* default_value_tree,
+    const bool is_optional, const bool is_array, ParseTree* default_value,
     ParseTree* syntax_decl)
     : ParseTree(parser, location),
       attribute_name(attribute_name),
       source_type(source_type),
       is_optional(is_optional),
       is_array(is_array),
-      default_value(default_value_tree ? default_value_tree->value : ""),
+      default_value(default_value),
       syntax_decl(syntax_decl ? syntax_decl->AsSyntax() : nullptr) {}
 
 void ParseTreeUnop::Print(ostream& stream_out) const {
@@ -99,7 +99,7 @@ void ParseTreeAttribute::Print(ostream& stream_out) const {
   if (is_optional) stream_out << "optional ";
   stream_out << source_type << " " << attribute_name;
   if (is_array) stream_out << "[]";
-  //if (syntax_decl) syntax_decl->Print(stream_out);
+  if (syntax_decl) syntax_decl->Print(stream_out);
   stream_out << ";\n";
 }
 
@@ -332,7 +332,7 @@ void ParseTreeClassDecl::SetConstructorArguments() {
   for (const auto& parse_tree : class_body) {
     ParseTreeAttribute* attr = parse_tree->AsAttribute();
     if (attr) {
-      if (attr->is_nested || attr->is_optional || !attr->default_value.empty()) {
+      if (attr->is_nested || attr->is_optional || attr->default_value) {
         optional_params.insert(attr);
       } else {
         attr->is_required = true;
@@ -349,7 +349,7 @@ ParseTreeAttribute* ParseTreeAttribute::SetFormatted(bool nested_alternate) {
   }
   if (nested_alternate) {
     is_nested = true;
-    if (!is_optional && !is_array && default_value.empty()) {
+    if (!is_optional && !is_array && !default_value) {
       Error(StringPrintf(
           "attribute '%s' cannot appear in an alternate because it is "
           "not optional, not an array, and has no default",
@@ -361,7 +361,7 @@ ParseTreeAttribute* ParseTreeAttribute::SetFormatted(bool nested_alternate) {
     parser->Error(
       StringPrintf("Attibute '%s' is declared optional but is not parsed in an"
                    " optional context.", attribute_name.c_str()));
-  } else if (!default_value.empty()) {
+  } else if (default_value) {
     parser->Error(
       StringPrintf("Attibute '%s' has a default value which can never be used"
                    " because it is not parsed in an optional context.",
@@ -614,12 +614,6 @@ void ParseTreeArray::Decorate3() {
   for (auto class_def : parser->class_productions_) {
     class_def->SetupPrecedences();
   }
-
-  for (auto class_def : parser->class_productions_) {
-    for (auto syntax : class_def->syntax_list) {
-      syntax->syntax->FlattenSyntax();
-    }
-  }
 }
 
 void ParseTreeClassDecl::SetHasPrecedence() {
@@ -645,49 +639,6 @@ void ParseTreeClassDecl::AddPrecedenceParsed(Precedence prec) {
 ParseTreeAttribute* ParseTreeClassDecl::LookupAttribute(string attribute_name) {
   if (attr_list.count(attribute_name) == 0) return nullptr;
   return attr_list[attribute_name];
-}
-
-void ParseTreeItemList::FlattenSyntax() {
-  ParseTreeMulti::FlattenSyntax();
-  for (auto iter = array.begin(); iter != array.end(); ) {
-    ParseTreeItemList* item_list = (*iter)->AsItemList();
-    if (item_list) {
-      array.erase(iter);
-      array.insert(iter, item_list->array.begin(), item_list->array.end());
-    } else {
-      ++iter;
-    }
-  }
-}
-
-void ParseTreeAltList::FlattenSyntaxHelper(
-    vector<ParseTree*>* new_array, ParseTreeSymbol** found_empty) {
-  for (auto tree : array) {
-    ParseTreeSymbol* symbol = tree->AsSymbol();
-    if (symbol && symbol->value.size() == 0) {
-      // empty alternate
-      *found_empty = symbol;
-      continue;
-    }
-    ParseTreeAltList* alt_list = tree->AsAltList();
-    if (alt_list) {
-      // nested alternate
-      alt_list->FlattenSyntaxHelper(new_array, found_empty);
-    } else {
-      // other
-      tree->FlattenSyntax();
-      new_array->push_back(tree);
-    }
-  }
-}
-
-void ParseTreeAltList::FlattenSyntax() {
-  vector<ParseTree*> new_array;
-  ParseTreeSymbol* found_empty = nullptr;
-  FlattenSyntaxHelper(&new_array, &found_empty);
-  if (found_empty) new_array.push_back(found_empty);
-  array.clear();
-  array.insert(array.begin(), new_array.begin(), new_array.end());
 }
 
 void ParseTreeIdentifier::GenerateExpression(ostream& stream) {

@@ -509,11 +509,6 @@ void ParseTree::GenerateAction(RuleInfo* rule_info) {
 
 void ParseTreeBinop::GenerateRuleForAlternate(RuleInfo* rule_info) {
   if (op == token::TOK_RIGHTARROW) {
-    ParseTreeSymbol* assign_value = operand2()->AsSymbol();
-    if (!assign_value) {
-      Error("Left side of '->' must be a string");
-      return;
-    }
     int original_size = rule_info->positional_matches.size() +
                         rule_info->keyword_matches->size();
     GenerateTreeMatcher(operand1(), rule_info, 1, true);
@@ -522,9 +517,10 @@ void ParseTreeBinop::GenerateRuleForAlternate(RuleInfo* rule_info) {
             rule_info->keyword_matches->size()) {
       Error(
           "No attribute matches are allowed inside an assignment list pattern");
-      return;
     }
-    rule_info->stream << " { $$ = " << assign_value->value << "; }";
+    rule_info->stream << " { $$ = ";
+    operand2()->GenerateExpression(rule_info->stream);
+    rule_info->stream << "; }";
   } else {
     ParseTree::GenerateRuleForAlternate(rule_info);
   }

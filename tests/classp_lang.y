@@ -106,6 +106,7 @@ class SyntaxDeclaration;
 %type <AttributeMap> alt_AttributeDeclaration__1
 %type <AttributeMap> alt_AttributeDeclaration__2
 %type <AttributeMap> alt_AttributeDeclaration__3
+%type <AttributeMap> alt_AttributeDeclaration__4
 %type <AttributeMap> alt_ClassDefinition__1
 %type <AttributeMap> alt_ClassDefinition__2
 %type <AttributeMap> alt_SampleDeclaration__1
@@ -205,7 +206,7 @@ altiterSTAR_ClassDefinition
   ;
 
 class_AttributeDeclaration
-  :   alt_AttributeDeclaration__1 TOK_IDENTIFIER TOK_IDENTIFIER  alt_AttributeDeclaration__2  alt_AttributeDeclaration__3 TOK_SEMICOLON {
+  :   alt_AttributeDeclaration__1 TOK_IDENTIFIER TOK_IDENTIFIER  alt_AttributeDeclaration__2  alt_AttributeDeclaration__4 TOK_SEMICOLON {
       AttributeMap keywords = $1;
       keywords.Merge($4);
       keywords.Merge($5);
@@ -224,14 +225,21 @@ alt_AttributeDeclaration__1
     $$ = AttributeMap(); }
   ;
 
+alt_AttributeDeclaration__3
+  :  WORD_default class_Expression {
+    $$ = AttributeMap();
+    $$.Add("default_value", $2); }
+  |  {
+    $$ = AttributeMap(); }
+  ;
+
 typed_bool__3
   :  SYM__2 SYM__3 { $$ = true; }
   ;
 
 alt_AttributeDeclaration__2
-  :  WORD_default class_Expression {
-    $$ = AttributeMap();
-    $$.Add("default_value", $2); }
+  :  alt_AttributeDeclaration__3 {
+    $$ = $1; }
   | typed_bool__3 {
     $$ = AttributeMap();
     $$.Add("is_array", $1); }
@@ -239,7 +247,7 @@ alt_AttributeDeclaration__2
     $$ = AttributeMap(); }
   ;
 
-alt_AttributeDeclaration__3
+alt_AttributeDeclaration__4
   :  WORD_syntax TOK_LPAREN class_SyntaxDeclaration TOK_RPAREN {
     $$ = AttributeMap();
     $$.Add("syntax_decl", $3); }
@@ -327,7 +335,7 @@ class_Expression
   ;
 
 class_SampleDeclaration
-  :  WORD_sample TOK_LPAREN TOK_STRING_LITERAL TOK_COMMA  alt_SampleDeclaration__1 TOK_RPAREN {
+  :  WORD_sample TOK_LPAREN TOK_STRING TOK_COMMA  alt_SampleDeclaration__1 TOK_RPAREN {
       AttributeMap keywords = $5;
       $$ = new SampleDeclaration(@$, $3, keywords); }
   ;
@@ -340,7 +348,7 @@ typed_SampleCheck__1
   ;
 
 alt_SampleDeclaration__1
-  : TOK_STRING_LITERAL {
+  : TOK_STRING {
     $$ = AttributeMap();
     $$.Add("expected", $1); }
   | typed_SampleCheck__1 {
@@ -499,9 +507,11 @@ void AttributeDeclaration::format(ostream& out, int precedence) {
   classpFormat(out, 0, attribute_name);
   out << " ";
   if (has_default_value) {
-    out << "default";
-    out << " ";
-    classpFormat(out, 0, default_value);
+    if (has_default_value) {
+      out << "default";
+      out << " ";
+      classpFormat(out, 0, default_value);
+    }
   } else if (is_array != false) {
     if (is_array == true) {
       out << "[";
