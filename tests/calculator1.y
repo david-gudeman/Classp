@@ -84,6 +84,8 @@ namespace calculator1 {
 
 YYParser::symbol_type yylex(ParseDriver* parser);
 
+ParseState defaultParseState;
+
 }  // namespace calculator1
 
 }

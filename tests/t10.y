@@ -75,6 +75,8 @@ namespace t10 {
 
 YYParser::symbol_type yylex(ParseDriver* parser);
 
+ParseState defaultParseState;
+
 }  // namespace t10
 
 }

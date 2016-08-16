@@ -80,6 +80,8 @@ namespace example2 {
 
 YYParser::symbol_type yylex(ParseDriver* parser);
 
+ParseState defaultParseState;
+
 }  // namespace example2
 
 }

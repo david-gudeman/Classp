@@ -166,8 +166,8 @@ void ParseTreeClassDecl::GenerateConstructor(ostream& out) {
       }
       out << "keyword_args.Take(\""<< name << "\", " << name << ")";
       if (attribute->default_value) {
-        out << ")) {\n    " << name << " = ";
-        attribute->default_value->GenerateExpression(out);
+        out << ")) {\n    ";
+        attribute->default_value->GenerateExpressionAssignment(out, name);
         out << ";\n  }";
       } else {
         out << ";";
@@ -185,6 +185,30 @@ void ParseTreeClassDecl::GenerateConstructorArgs(ostream& out) {
   if (has_keyword_arg) {
     out << ", keyword_args";
   }
+}
+
+void ParseTreeCall::GenerateExpressionCompare(ostream& out, const string& attribute_name, bool equal) {
+  out << attribute_name << " != nullptr && (" << attribute_name << "->className() != \""
+      << function_name << "\"";
+  if (!ValidateCall()) return;
+  for (auto tree : array) {
+    auto binop = tree->AsBinop();
+    if (!binop || binop->op != token::TOK_RIGHTARROW) {
+      Error("Illegal syntax in a constructor.");
+      return;
+    }
+    out << " || dynamic_cast<" << function_name << "*>(" << attribute_name << ")->";
+    binop->operand1()->Print(out);
+    out << " != ";
+    binop->operand2()->Print(out);
+  }
+  out << ")";
+}
+
+void ParseTreeCall::GenerateExpressionAssignment(ostream& out, const string& attribute_name) {
+  if (!ValidateCall()) return;
+  out << attribute_name << " = ";
+  Print(out);
 }
 
 }  // namespace classp

@@ -1,0 +1,19 @@
+class A {
+  %parseable;
+  syntax('(' self ')');
+  sample('( and )', fail);
+  sample('x y', '(B a1:(D str1:blank1 str2:blank2))');
+  sample('x foo y', fail);
+  sample('x foo and bar y', '(B a1:(D str1:foo str2:bar))');
+}
+
+class B: A {
+  A a1 default D(str1->"blank1", str2->"blank2");
+  syntax('x' (a1|) 'y');
+}
+
+class D: A {
+  identifier str1;
+  identifier str2;
+  syntax(str1 'and' str2);
+}

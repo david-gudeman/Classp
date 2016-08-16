@@ -40,6 +40,8 @@ using classp::AttributeMap;
 // Location and state information from the parser.
 typedef location ParseState;
 
+extern ParseState defaultParseState;
+
 class AstNode;
 /* BEGIN FORWARD DECLARATIONS */
   @@PrintForwardDeclarations(out);@@

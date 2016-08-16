@@ -1,0 +1,110 @@
+// This file is a part of the Classp parser, formatter, and AST generator. 
+// Description: Used to generate skeleton-generator.h from the skeleton files. 
+//  
+// Copyright 2015 Google Inc. 
+//  
+// Licensed under the Apache License, Version 2.0 (the "License"); 
+// you may not use this file except in compliance with the License. 
+// You may obtain a copy of the License at 
+//  
+// http://www.apache.org/licenses/LICENSE-2.0 
+//  
+// Unless required by applicable law or agreed to in writing, software 
+// distributed under the License is distributed on an "AS IS" BASIS, 
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
+// See the License for the specific language governing permissions and 
+// limitations under the License. 
+ 
+
+@@'
+  enum Associativity{AssocLeft, AssocRight, AssocNassoc};
+  enum SampleCheck {ExpectSucceed, ExpectFailure, PrintResult, CompareResult};
+'@@
+class Declarations {
+  %parseable;
+  ClassDefinition decl[];
+  syntax ( decl* );
+  sample("class A {%parseable;int n;syntax ('+' n);sample ('+ 3');}", print);
+}
+
+class ClassDefinition {
+  identifier class_name;
+  optional identifier parent_name;
+  AttributeDeclaration attributes[];
+  SyntaxDeclaration syntax_decl[];
+  SampleDeclaration sample_decl[];
+  bool parseable default false syntax(self{true->'%parseable' ';'});
+  syntax ('class' class_name (':' parent_name|)
+          '{' ((attributes|syntax_decl|sample_decl|parseable)*) '}');
+}
+
+class AttributeDeclaration {
+  bool is_optional default false syntax(self{true->'optional'}|);
+  identifier attribute_name;
+  identifier type_name;
+  optional Expression default_value syntax('default' self|);
+  bool is_array default false syntax(self{true->'[' ']'});
+  optional SyntaxDeclaration syntax_decl syntax('syntax' '(' self ')'|);
+  syntax(is_optional type_name attribute_name (default_value|is_array|) syntax_decl ';');
+}
+
+class SyntaxDeclaration {
+  Pattern pattern;
+  optional Associativity assoc syntax(self{AssocLeft->'left'
+                                          |AssocRight->'right'
+                                          |AssocNassoc->'nassoc'
+                                          |AssocLeft->'assoc'});
+  optional int precedence;
+  syntax('syntax' '(' pattern ')' ('%' assoc precedence|));
+}
+
+class Pattern {
+  syntax('(' self ')');
+}
+
+class Operation: Pattern {
+  Pattern pattern1;
+  Pattern pattern2 default "" syntax(self|);
+}
+
+class Alternation: Operation {
+  syntax(pattern1 '|' pattern2) %assoc 1;
+}
+
+class Iterator0OrMore:Operation {
+  syntax(pattern1 '*' pattern2) %nassoc 2;
+}
+
+class Iterator1OrMore:Operation {
+  syntax(pattern1 '+' pattern2) %nassoc 2;
+}
+
+class PatternSequence: Pattern {
+  Pattern pattern1;
+  Pattern pattern2;
+  syntax(pattern1 pattern2) %assoc 3;
+}
+
+class CasePattern: Pattern {
+  identifier attribute;
+  Pattern patterns[];
+  Expression exprs[];
+  syntax(attribute '{' (exprs '->' patterns + '|') '}');
+}
+
+class Expression {
+  identifier id;
+  syntax(id);
+}
+
+class SampleDeclaration {
+  string sample_decl;
+  optional string expected;
+  SampleCheck check default ExpectSucceed syntax(self
+      {ExpectSucceed->'succeed'
+      |ExpectFailure->'fail'
+      |PrintResult->'print'
+      |CompareResult->});
+  syntax('sample' '(' sample_decl ',' (expected|check) ')');
+}
+

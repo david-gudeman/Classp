@@ -1,0 +1,17 @@
+class A {
+  %parseable;
+  syntax('(' self ')');
+}
+
+class B: A {
+  A a1 default D(str->"");
+  A a2 default D(str->"") syntax(self|);
+  A a3 syntax(self{D(str->"1")->'found 1'|D(str->"2")->'found 2'});
+  optional A a4 syntax(self{D(str->"3")->'found 3'|D(str->"4")->});
+  syntax('if' a1 'then' a2 'elif' a3 'else' a4 'fi');
+}
+
+class D: A {
+  identifier str;
+  syntax(str);
+}

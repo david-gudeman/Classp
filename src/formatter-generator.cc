@@ -302,6 +302,7 @@ void ParseTree::GenerateCaseFormatter(const FormatInfo& format_info,
     for (auto tree : alt_list->array) {
       assert(tree->IsAssignment());
       ParseTreeBinop* assignment = tree->AsBinop();
+      assert(assignment->op == token::TOK_RIGHTARROW);
       if (assignment->operand1() == nullptr) {
         default_val = assignment->operand2();
         break;
@@ -317,10 +318,11 @@ void ParseTree::GenerateCaseFormatter(const FormatInfo& format_info,
   }
   for (auto tree : alt_list->array) {
     ParseTreeBinop* assignment = tree->AsBinop();
+    assert(assignment->op == token::TOK_RIGHTARROW);
     if (assignment->operand1() == nullptr) continue;
-    format_info.stream_ << separator << else_token << "if ("
-                        << attribute->attribute_name << " == ";
-    assignment->operand2()->GenerateExpression(format_info.stream_);
+    format_info.stream_ << separator << else_token << "if (";
+    assignment->operand2()->GenerateExpressionCompare(
+        format_info.stream_, attribute->attribute_name, true);
     format_info.stream_ << ") {";
     assignment->operand1()->GenerateFormatter(format_info, separator + "  ",
                                               false, false);
@@ -414,8 +416,7 @@ AlternateDetermination ParseTreeAttribute::GenerateAlternateCondition(ostream& s
     return FULLY_DETERMINING;
   }
   if (default_value) {
-    stream << attribute_name << " != ";
-    default_value->Print(stream);
+    default_value->GenerateExpressionCompare(stream, attribute_name, false);
     return SEMI_DETERMINING;
   }
   return NOT_DETERMINING;

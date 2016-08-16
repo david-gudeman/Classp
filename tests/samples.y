@@ -69,6 +69,8 @@ namespace samples {
 
 YYParser::symbol_type yylex(ParseDriver* parser);
 
+ParseState defaultParseState;
+
 }  // namespace samples
 
 }

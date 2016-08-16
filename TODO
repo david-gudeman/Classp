@@ -122,7 +122,7 @@ class B {
 then it is normally greedy, but this will cut it off before any expression that
 matches <re>.
 
-* Cooperation operator: (<matcher1> & <matcher2>). Matches only if it both
+* Coincidence operator: (<matcher1> & <matcher2>). Matches only if it both
 <matcher1> and <matcher2> match.
 
 * Output for other parser generators and languages. The parser generator has to

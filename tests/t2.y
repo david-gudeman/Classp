@@ -81,6 +81,8 @@ namespace t2 {
 
 YYParser::symbol_type yylex(ParseDriver* parser);
 
+ParseState defaultParseState;
+
 }  // namespace t2
 
 }

@@ -117,6 +117,8 @@ namespace expr1 {
 
 YYParser::symbol_type yylex(ParseDriver* parser);
 
+ParseState defaultParseState;
+
 }  // namespace expr1
 
 }

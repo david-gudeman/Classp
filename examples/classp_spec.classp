@@ -1,0 +1,14 @@
+class Pattern {
+  %parseable;
+  syntax('(' self ')');
+}
+
+class Operation: Pattern {
+  Pattern pattern1;
+  Pattern pattern2 default StringPattern(str->"") syntax(self|);
+}
+
+class LitPattern: Pattern {
+  identifier str;
+  syntax(str);
+}

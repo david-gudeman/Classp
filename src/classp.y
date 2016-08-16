@@ -26,6 +26,7 @@ using std::vector;
 
 namespace classp {
 struct ParseTree;
+struct ParseTreeIdentifier;
 struct ParseTreeList;
 struct ParseTreeSymbol;
 class ParserBase;
@@ -129,19 +130,68 @@ static inline yyParser::symbol_type yylex(ParserBase* parser) {
     return parser->lexer_->NextToken(parser);
 }
 
+std::map<int, string>* operator_symbols = 0;
+void InitOperatorSymbols() {
+  operator_symbols = new std::map<int, string>;
+  (*operator_symbols)[token::TOK_AND] = "&&";
+  (*operator_symbols)[token::TOK_BAR] = "|";
+  (*operator_symbols)[token::TOK_COLON] = ":";
+  (*operator_symbols)[token::TOK_COMMA] = ",";
+  (*operator_symbols)[token::TOK_DOLLARDOLLAR] = "$$";
+  (*operator_symbols)[token::TOK_DOTDOT] = "..";
+  (*operator_symbols)[token::TOK_EQUAL] = "=";
+  (*operator_symbols)[token::TOK_EQL] = "==";
+  (*operator_symbols)[token::TOK_FALSE] = "false";
+  (*operator_symbols)[token::TOK_GEQ] = ">=";
+  (*operator_symbols)[token::TOK_GTR] = ">";
+  (*operator_symbols)[token::TOK_LBRACE] = "{";
+  (*operator_symbols)[token::TOK_LBRACK] = "[";
+  (*operator_symbols)[token::TOK_LEQ] = "<=";
+  (*operator_symbols)[token::TOK_LPAREN] = "(";
+  (*operator_symbols)[token::TOK_LSHIFT] = "<<";
+  (*operator_symbols)[token::TOK_LSS] = "<";
+  (*operator_symbols)[token::TOK_MINUS] = "-";
+  (*operator_symbols)[token::TOK_NEQ] = "!=";
+  (*operator_symbols)[token::TOK_NOT] = "!";
+  (*operator_symbols)[token::TOK_OR] = "||";
+  (*operator_symbols)[token::TOK_PERCENT] = "%";
+  (*operator_symbols)[token::TOK_PERIOD] = ".";
+  (*operator_symbols)[token::TOK_PLUS] = "+";
+  (*operator_symbols)[token::TOK_RIGHTARROW] = "->";
+  (*operator_symbols)[token::TOK_QUESTION] = "?";
+  (*operator_symbols)[token::TOK_RBRACE] = "}";
+  (*operator_symbols)[token::TOK_RBRACK] = "]";
+  (*operator_symbols)[token::TOK_RPAREN] = ")";
+  (*operator_symbols)[token::TOK_RSHIFT] = ">>";
+  (*operator_symbols)[token::TOK_SEMICOLON] = ";";
+  (*operator_symbols)[token::TOK_SLASH] = "/";
+  (*operator_symbols)[token::TOK_STAR] = "*";
+}
+
+string GetOpSymbol(int op) {
+  if (!operator_symbols) {
+    InitOperatorSymbols();
+  }
+  auto it = operator_symbols->find(op);
+  if (it == operator_symbols->end())
+    return "UNKNOWN_OPERATOR";
+  return it->second;
+}
+
 }  // namespace classp
 
 }
 
 %type <classp::ParseTree*> declaration attribute_decl syntax_decl opt_syntax_decl
 %type <classp::ParseTree*> syntax_item syntax_spec syntax_alt_list syntax_item_list
-%type <classp::ParseTree*> opt_syntax_item_list syntax_attribute identifier sample_decl
-%type < vector<ParseTree*> > declaration_list class_body features
+%type <classp::ParseTree*> opt_syntax_item_list syntax_attribute sample_decl
+%type <classp::ParseTreeIdentifier*> identifier
+%type < vector<ParseTree*> > declaration_list class_body features arg_list
 %type <ParseTreeAltList*> syntax_case_list
 %type <vector<string>> parents_list parents_list2
 %type <bool> opt_optional opt_array
 %type <classp::ParseTree*> conjunction
-%type <classp::ParseTree*> expression opt_initializer
+%type <classp::ParseTree*> arg_expression expression opt_initializer
 %type <classp::ParseTree*> comparison
 %type <classp::ParseTree*> factor
 %type <classp::ParseTree*> literal
@@ -188,6 +238,9 @@ operand:
   | identifier     { $$ = $1; }
   | TOK_NULL       { $$ = nullptr; }
   | TOK_LPAREN expression TOK_RPAREN  { $$ = $2; }
+  | identifier TOK_LPAREN arg_list TOK_RPAREN {
+      $$ = new ParseTreeCall(parser, @$, $1, $3);
+    }
   ;
 
 identifier:
@@ -216,6 +269,25 @@ string_literal:
   ;
 
 /* Expressions. */
+
+arg_list:
+    { $$ = vector<ParseTree*>(); }
+  | arg_expression { 
+      $$ = vector<ParseTree*>();
+      $$.push_back($1);
+    }
+  | arg_list TOK_COMMA arg_expression {
+      $$ = $1;
+      $$.push_back($3);
+    }
+  ;
+
+arg_expression:
+    expression { $$ = $1; }
+  | identifier TOK_RIGHTARROW expression {
+      $$ = new ParseTreeBinop(parser, @$, token::TOK_RIGHTARROW, $1, $3);
+    }
+  ;
 
 expression:
     conjunction  { $$ = $1; }
@@ -391,8 +463,6 @@ syntax_spec:
       $$ = new ParseTreeUnop(parser, @$, token::TOK_STAR, $1); }
   | opt_syntax_item_list TOK_PLUS {
       $$ = new ParseTreeUnop(parser, @$, token::TOK_PLUS, $1); }
-  | opt_syntax_item_list TOK_QUESTION {
-      $$ = new ParseTreeUnop(parser, @$, token::TOK_QUESTION, $1); }
   ;
 
 opt_syntax_item_list:

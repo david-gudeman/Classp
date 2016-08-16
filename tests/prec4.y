@@ -76,6 +76,8 @@ namespace prec4 {
 
 YYParser::symbol_type yylex(ParseDriver* parser);
 
+ParseState defaultParseState;
+
 }  // namespace prec4
 
 }

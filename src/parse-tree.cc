@@ -71,7 +71,7 @@ void ParseTreeUnop::Print(ostream& stream_out) const {
 void ParseTreeBinop::Print(ostream& stream_out) const {
   stream_out << "(";
   operand1()->Print(stream_out);
-  stream_out << ") " << op << " (";
+  stream_out << ") " << GetOpSymbol(op) << " (";
   operand2()->Print(stream_out);
   stream_out << ")";
 }
@@ -83,6 +83,22 @@ void ParseTreeArray::Print(ostream& stream_out) const {
     elem->Print(stream_out);
   }
   stream_out << " ]";
+}
+
+void ParseTreeCall::Print(ostream& stream_out) const {
+  // TODO(dgudeman): Currently this only handles constructors.
+  stream_out << "new " << function_name << "(defaultParseState";
+  for (auto tree : array) {
+    auto binop = tree->AsBinop();
+    if (!binop || binop->op != token::TOK_RIGHTARROW) {
+      return;
+    }
+    stream_out << ", /*";
+    binop->operand1()->Print(stream_out);
+    stream_out  << "*/ ";
+    binop->operand2()->Print(stream_out);
+  }
+  stream_out << ")";
 }
 
 void ParseTreeClassDecl::Print(ostream& stream_out) const {
@@ -154,6 +170,25 @@ void ParseTreeClassDecl::AddAttributes(
       attr_list.insert(elem);
     }
   }
+}
+
+bool ParseTreeCall::ValidateCall() {
+  // for this this only handles class constructors
+  if (!validated) {
+    validated = true;
+    valid = true;
+    auto class_def = parser->GetClassDecl(function_name);
+    if (!class_def) {
+      Error("Constructor for unknown node type.\n");
+      return valid = false;
+    }
+    if (array.size() != class_def->required_params.size()) {
+      Error("Wrong number of arguments for constructor.");
+      return valid = false;
+    }
+    // TODO(dgudeman): add name and type checking.
+  }
+  return valid;
 }
 
 void ParseTreeClassDecl::Decorate1() {

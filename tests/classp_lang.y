@@ -140,6 +140,8 @@ namespace classp_lang {
 
 YYParser::symbol_type yylex(ParseDriver* parser);
 
+ParseState defaultParseState;
+
 }  // namespace classp_lang
 
 }
@@ -335,7 +337,7 @@ class_Expression
   ;
 
 class_SampleDeclaration
-  :  WORD_sample TOK_LPAREN TOK_STRING TOK_COMMA  alt_SampleDeclaration__1 TOK_RPAREN {
+  :  WORD_sample TOK_LPAREN TOK_STRING_LITERAL TOK_COMMA  alt_SampleDeclaration__1 TOK_RPAREN {
       AttributeMap keywords = $5;
       $$ = new SampleDeclaration(@$, $3, keywords); }
   ;
@@ -348,7 +350,7 @@ typed_SampleCheck__1
   ;
 
 alt_SampleDeclaration__1
-  : TOK_STRING {
+  : TOK_STRING_LITERAL {
     $$ = AttributeMap();
     $$.Add("expected", $1); }
   | typed_SampleCheck__1 {

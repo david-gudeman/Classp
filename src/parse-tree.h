@@ -46,6 +46,7 @@ using std::string;
 class FormatInfo;
 struct ParseTreeSymbol;
 struct ParseTreeIdentifier;
+struct ParseTreeCall;
 struct ParseTreeBinop;
 struct ParseTreeArray;
 struct ParseTreeClassDecl;
@@ -58,6 +59,8 @@ class ParserBase;
 class LexerBase;
 
 typedef yyParser::token token;
+
+string GetOpSymbol(int op);
 
 #define SELF_ATTR_NAME "self"
 
@@ -100,6 +103,7 @@ struct ParseTree {
   ParseTree(ParserBase* parser, const yyParser::location_type& location)
       : parser(parser), location(location) {}
   virtual ~ParseTree() {}
+  virtual const string TreeType() const { return "ParseTree";}
 
   void Error(const std::string& msg);
   void Fatal[[noreturn]](const std::string& msg);
@@ -111,6 +115,7 @@ struct ParseTree {
   // nullptr.
   virtual ParseTreeSymbol* AsSymbol() { return nullptr; }
   virtual ParseTreeIdentifier* AsIdentifier() { return nullptr; }
+  virtual ParseTreeCall* AsCall() { return nullptr; }
   virtual ParseTreeBinop* AsBinop() { return nullptr; }
   virtual ParseTreeArray* AsArray() { return nullptr; }
   virtual ParseTreeClassDecl* AsClass() { return nullptr; }
@@ -209,6 +214,19 @@ struct ParseTree {
   void GenerateCaseFormatter(const FormatInfo& format_info,
                              const string& separator, ParseTree* t1,
                              ParseTree* t2);
+  
+  // Generate code to compare this with attribute_name. If equal is false then
+  // compare for inequality.
+  virtual void GenerateExpressionCompare(ostream& out, const string& attribute_name, bool equal) {
+    out << attribute_name << (equal ? " == " : " != ");
+    Print(out);
+  }
+  
+  // Generate code to assign this to attribute_name.
+  virtual void GenerateExpressionAssignment(ostream& out, const string& attribute_name) {
+    out << attribute_name << " = ";
+    Print(out);
+  }
 
   // Write the condition used to decide whether to print this alternate and
   // return its category.
@@ -225,6 +243,7 @@ struct ParseTreeBool : public ParseTree {
                 const bool value)
       : ParseTree(parser, location), value(value) {}
   virtual ~ParseTreeBool() {}
+  virtual const string TreeType() const { return "ParseTreeBool";}
   void Print(ostream& stream_out) const override {
     stream_out << (value ? "true" : "false");
   }
@@ -237,6 +256,7 @@ struct ParseTreeInteger : public ParseTree {
                    const int64_t value)
       : ParseTree(parser, location), value(value) {}
   virtual ~ParseTreeInteger() {}
+  virtual const string TreeType() const { return "ParseTreeInteger";}
   void Print(ostream& stream_out) const override { stream_out << value; }
 
   Precedence GetFloat() override { return value; }
@@ -249,6 +269,7 @@ struct ParseTreeFloat : public ParseTree {
                  const double value)
       : ParseTree(parser, location), value(value) {}
   virtual ~ParseTreeFloat() {}
+  virtual const string TreeType() const { return "ParseTreeFloat";}
   void Print(ostream& stream_out) const override { stream_out << value; }
 
   const double value;
@@ -259,6 +280,7 @@ struct ParseTreeSymbol : public ParseTree {
                   const string& value)
       : ParseTree(parser, location), value(value) {}
   virtual ~ParseTreeSymbol() {}
+  virtual const string TreeType() const { return "ParseTreeSymbol";}
 
   ParseTreeSymbol* AsSymbol() override { return this; }
 
@@ -279,6 +301,7 @@ struct ParseTreeIdentifier : public ParseTree {
                       const string& value)
       : ParseTree(parser, location), value(value) {}
   virtual ~ParseTreeIdentifier() {}
+  virtual const string TreeType() const { return "ParseTreeIdentifier";}
 
   ParseTreeIdentifier* AsIdentifier() override { return this; }
 
@@ -298,6 +321,7 @@ struct ParseTreeMulti : public ParseTree {
                  const vector<ParseTree*>& array)
       : ParseTree(parser, location), array(array) {}
   virtual ~ParseTreeMulti() {}
+  virtual const string TreeType() const { return "ParseTreeMulti";}
 
   ParseTree* ResolveSyntax(ParseTreeSyntaxDecl* syntax_def,
                            bool nested_alternate) override;
@@ -322,6 +346,30 @@ struct ParseTreeMulti : public ParseTree {
   vector<ParseTree*> array;
 };
 
+struct ParseTreeCall : public ParseTreeMulti {
+  ParseTreeCall(ParserBase* parser, const yyParser::location_type& location,
+                ParseTreeIdentifier* f_name, vector<ParseTree*> array)
+      :ParseTreeMulti(parser, location, array)
+      ,function_name(f_name->value) {}
+
+  virtual const string TreeType() const { return "ParseTreeCall";}
+  ParseTreeCall* AsCall() override { return this; }
+
+  void Print(ostream& stream_out) const override;
+
+  void GenerateExpressionCompare(ostream& out, const string& attribute_name, bool equal) override;
+  
+  void GenerateExpressionAssignment(ostream& out, const string& attribute_name) override;
+  
+  // This cannot be called until near the end of Decorate2 because it depends on the
+  // constructors having been initialized.
+  bool ValidateCall();
+
+  string function_name;
+  bool validated = false;
+  bool valid = false;
+};
+
 struct ParseTreeUnop : public ParseTreeMulti {
   ParseTreeUnop(ParserBase* parser, const yyParser::location_type& location,
                 const int64_t op, ParseTree* op1)
@@ -329,6 +377,7 @@ struct ParseTreeUnop : public ParseTreeMulti {
     array.push_back(op1);
   }
   virtual ~ParseTreeUnop() {}
+  virtual const string TreeType() const { return "ParseTreeUnop";}
   const ParseTree* operand1() const { return array[0]; }
   ParseTree*& operand1() { return array[0]; }
   void Print(ostream& stream_out) const override;
@@ -349,6 +398,7 @@ struct ParseTreeBinop : public ParseTreeMulti {
     array.push_back(op2);
   }
   virtual ~ParseTreeBinop() {}
+  virtual const string TreeType() const { return "ParseTreeBinop";}
   ParseTreeBinop* AsBinop() override { return this; }
   const ParseTree* operand1() const { return array[0]; }
   const ParseTree* operand2() const { return array[1]; }

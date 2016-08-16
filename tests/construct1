@@ -1,0 +1,17 @@
+class A {
+  %parseable;
+  syntax('(' self ')');
+  sample('()', fail);
+  sample('x y', fail);
+  sample('x foo y', '(B a1:(D str:foo))');
+}
+
+class B: A {
+  A a1 default D(str->"");
+  syntax('x' a1 'y');
+}
+
+class D: A {
+  identifier str;
+  syntax(str);
+}
