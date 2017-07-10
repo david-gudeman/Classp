@@ -1,7 +1,7 @@
 This directory contains an implementation of Classp written by David Gudeman
 (dgudeman@google.com or dave.gudeman@gmail.com).
 
-#INTRODUCTION
+# INTRODUCTION
 The Classp language is a system for writing parsers without a writing a grammar.
 Grammars are designed to describe the surface structure of a language rather
 than the logical structure that the programmer really wants to work with.
@@ -20,7 +20,7 @@ A Classp AST description is compiled by classp into C++, Bison, and Flex.
 The language is documented in the [language manual](https://docs.google.com/document/d/1hqtbPkKbA5janVVb0xEXg4n1nGKs3tCgijK2PFRCx2k/edit?usp=sharing).
 The program itself is documented in the [user manual](https://docs.google.com/document/d/1Qq3R87a-_Aru8DXXVpxM35y5rWWwrJ1tpKoWs3y0o1U/edit?usp=sharing).
 
-#BUILDING AND TESTING
+# BUILDING AND TESTING
 The source code is in the src subdirectory. It runs on Linux and builds with Bison 3.02
 or later, Flex 2.5.39 or later, and g++ 4.8.2.
 
@@ -37,7 +37,7 @@ To have some tests actually run and execute sample parses type
 
   make samples
 
-#CLASSP FOR THE IMPATIENT
+# CLASSP FOR THE IMPATIENT
 After building Classp as described above, here is a quick example of using it. Suppose
 the main directory is DIR, then enter the following lines in the shell:
 ```
@@ -112,7 +112,7 @@ Run the program
 EOF
 ```
 
-#STATUS
+# STATUS
 The system does not have any hooks for doing anything with the AST once it
 is constructed other than formatting it or printing a tree representation.
 Essentially, this is still a demo system and not a real parsing tool.
