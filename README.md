@@ -1,5 +1,5 @@
 This directory contains an implementation of Classp written by David Gudeman
-(dgudeman@google.com or dave.gudeman@gmail.com).
+(dave.gudeman@gmail.com).
 
 # INTRODUCTION
 The Classp language is a system for writing parsers without a writing a grammar.
